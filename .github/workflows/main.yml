@@ -6,8 +6,8 @@ on:
       - main  # Only triggers on push to the 'main' branch
 
 jobs:
-  build:
-    runs-on: windows-latest  # Set the runner to Windows
+  build-windows:
+    runs-on: windows-latest  # Windows Runner
 
     steps:
     - name: Checkout code
@@ -16,27 +16,19 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'  # Adjust as necessary
-        
+        python-version: '3.x'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Build
+    - name: Build Windows Binary
       run: |
-        pyinstaller script.spec  # Ensure the correct .spec file is specified
+        pyinstaller script.spec
 
-    - name: List output directory
-      run: dir
-
-    #- name: Install 7-Zip
-     # run: |
-      #  choco install 7zip.install -y  # Using Chocolatey to install 7-Zip
-
-    - name: Create ZIP
+    - name: Move Files to Root
       run: |
-        # Move the necessary files to the root of the working directory before zipping
         Move-Item -Path "dist\Vector24.exe" -Destination "."
         Move-Item -Path "app.log" -Destination "."
         Move-Item -Path "config.json" -Destination "."
@@ -44,11 +36,94 @@ jobs:
         Move-Item -Path "startup.mp3" -Destination "."
         Move-Item -Path "version.json" -Destination "."
 
-        # Create the zip file
-        & "C:\Program Files\7-Zip\7z.exe" a -tzip Vector24-ADDVNAME-amd64-win.zip Vector24.exe app.log config.json positions.json startup.mp3 version.json
+    - name: Create ZIP (Windows)
+      run: |
+        & "C:\Program Files\7-Zip\7z.exe" a -tzip Vector24-windows-amd64.zip Vector24.exe app.log config.json positions.json startup.mp3 version.json
 
-    - name: Upload
+    - name: Upload Artifact (Windows)
       uses: actions/upload-artifact@v3
       with:
-        name: final-zip-package
-        path: Vector24-ADDVNAME-amd64-win.zip
+        name: Vector24-windows-amd64
+        path: Vector24-windows-amd64.zip
+
+  build-macos-intel:
+    runs-on: macos-latest  # macOS Runner (Intel or Apple Silicon)
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build macOS Intel Binary
+      if: runner.os == 'macOS' && matrix.arch == 'x86_64'
+      run: |
+        pyinstaller --onefile script.spec
+
+    - name: Move Files to Root (macOS Intel)
+      run: |
+        mv dist/Vector24 ./
+        mv app.log ./
+        mv config.json ./
+        mv positions.json ./
+        mv startup.mp3 ./
+        mv version.json ./
+
+    - name: Create ZIP (macOS Intel)
+      run: |
+        zip Vector24-macos-intel.zip Vector24 app.log config.json positions.json startup.mp3 version.json
+
+    - name: Upload Artifact (macOS Intel)
+      uses: actions/upload-artifact@v3
+      with:
+        name: Vector24-macos-intel
+        path: Vector24-macos-intel.zip
+
+  build-macos-silicon:
+    runs-on: macos-latest  # macOS Runner
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build macOS Silicon Binary
+      if: runner.os == 'macOS' && matrix.arch == 'arm64'
+      run: |
+        pyinstaller --onefile script.spec
+
+    - name: Move Files to Root (macOS Silicon)
+      run: |
+        mv dist/Vector24 ./
+        mv app.log ./
+        mv config.json ./
+        mv positions.json ./
+        mv startup.mp3 ./
+        mv version.json ./
+
+    - name: Create ZIP (macOS Silicon)
+      run: |
+        zip Vector24-macos-silicon.zip Vector24 app.log config.json positions.json startup.mp3 version.json
+
+    - name: Upload Artifact (macOS Silicon)
+      uses: actions/upload-artifact@v3
+      with:
+        name: Vector24-macos-silicon
+        path: Vector24-macos-silicon.zip
